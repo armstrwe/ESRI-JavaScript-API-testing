@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>ArcGIS API for JavaScript Tutorials: Display a map</title>
+
+    <style>
+      html,
+      body,
+     
+      #viewDiv {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    
+      }
+
+  
+    </style>
+   
+    
+    <link rel="stylesheet" href="https://js.arcgis.com/4.24/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.24/"></script>
+    <script>
+      
+        
+        
+        // require grabs the built-in modules (in this case in js.4.24), it's the same as importing libraries
+        // defined function, and a general function
+        require([
+            "esri/config",
+            "esri/Map", 
+            "esri/views/MapView",
+            "esri/Graphic",
+            "esri/layers/GraphicsLayer",
+            "esri/layers/FeatureLayer",
+            "esri/layers/VectorTileLayer",
+            "esri/widgets/Legend",
+            "esri/widgets/LayerList", 
+            "esri/widgets/ScaleBar",
+            "esri/widgets/DistanceMeasurement2D",
+            "esri/widgets/Compass", 
+            "esri/widgets/Search",
+            "esri/rest/query"
+           
+        ], function (esriConfig,Map, MapView, Graphic, GraphicsLayer, FeatureLayer, VectorTileLayer, Legend, LayerList, ScaleBar, DistanceMeasurement2D, Compass, Search, query) {
+        esriConfig.apiKey = "AAPK2bcfac8c83094b77ac3df10268c0211d6sgT90p_JTa1Vlhb6eVQWqdUfS7E1YDU9AWCMzOVvkEldF2PkWJ4SxhXMZuXm1Dl";
+        
+          
+        // const means the variable can't be reasigned
+        // instantiate the map class on map  
+        
+        //-------------------------------------------------------------------------------------
+        // create a new map instance, and map view instance, need both
+            
+            const map = new Map({
+          basemap: "arcgis-light-gray" // Basemap layer service
+        });
+        //instantiate the MapView class on view
+          const view = new MapView({
+              //map property of Mapview == map variable
+          map: map,
+          center: [-118.805, 34.027], // Longitude, latitude
+          zoom: 10, // Zoom level
+          container: "viewDiv" // Div element
+          });
+      
+        //-----------------------------------------------------------------------------------
+        //const featureLayer = map.layers.getItemAt(0);
+        //const legend = new Legend({
+            //view: view,
+            //layerInfos: [
+              //{
+                //layer: featureLayer,
+                //title: "NY Educational Attainment"
+              //}
+            //]
+        //});
+            //view.ui.add(legend, "bottom-right");
+            
+            
+        //-----------------------------------------------------------------------------------
+            // create renderers for the feature layers
+            
+        const trailheadsRenderer = {
+        "type": "simple",
+        "symbol": {
+          "type": "picture-marker",
+          "url": "http://static.arcgis.com/images/Symbols/NPS/npsPictograph_0231b.png",
+          "width": "18px",
+          "height": "18px"
+        }
+      }
+            
+        //------------------------------------------------------------------------------------
+        // create labels for the feature layers
+            
+        const trailheadsLabels = {
+        symbol: {
+          type: "text",
+          color: "#FFFFFF",
+          haloColor: "#5E8D74",
+          haloSize: "2px",
+          font: {
+            size: "12px",
+            family: "Noto Sans",
+            style: "italic",
+            weight: "normal"
+          }
+        },
+
+        labelPlacement: "above-center",
+        labelExpressionInfo: {
+          expression: "$feature.TRL_NAME"
+        }
+      };    
+            
+    
+        //-----------------------------------------------------------------------------------------
+            // create renderer for trails and visual variable
+         // Define a unique value renderer and symbols
+      const trailsRenderer = {
+        type: "simple",
+        symbol: {
+          color: "#BA55D3",
+          type: "simple-line",
+          style: "solid"
+        },
+
+          // the visual variable makes the rendering dynamic based on the "ELEV_GAIN" field
+          
+        visualVariables: [
+          {
+            type: "size",
+            field: "ELEV_GAIN",
+            minDataValue: 0,
+            maxDataValue: 2300,
+            minSize: "3px",
+            maxSize: "10px"
+          }
+        ]
+      };
+            
+         //-------------------------------------------------------------------------------------------------------   
+            // bike trails renderer
+          // Add bikes only trails
+      const bikeTrailsRenderer = {
+        type: "simple",
+        symbol: {
+          type: "simple-line",
+          style: "short-dot",
+          color: "#FF91FF",
+          width: "5px"
+        }
+      };
+        
+    //------------------------------------------------------------------------------------------------------------        
+            // parks / open space renderer
+            
+ 
+      // Add parks with a class breaks renderer and unique symbols
+      function createFillSymbol(value, color) {
+        return {
+          "value": value,
+          "symbol": {
+            "color": color,
+            "type": "simple-fill",
+            "style": "solid",
+            "outline": {
+              "style": "none"
+            }
+          },
+          "label": value
+        };
+      }
+
+      const openSpacesRenderer = {
+        type: "unique-value",
+        field: "TYPE",
+        uniqueValueInfos: [
+          createFillSymbol("Natural Areas", "#9E559C"),
+          createFillSymbol("Regional Open Space", "#A7C636"),
+          createFillSymbol("Local Park", "#149ECE"),
+          createFillSymbol("Regional Recreation Park", "#ED5151")
+        ]
+      };
+            
+         //---------------------------------------------------------------------------------------------   
+            
+            
+            
+        // Graphics layer is a container for graphics. It is used with map view, and displays graphics on map on top
+        // of all other layers. 
+        
+        const graphicsLayer = new GraphicsLayer();
+        map.add(graphicsLayer);
+        
+        //-----------------------------------------------------------------------------------------
+        // create a point and marker for the point
+         const point = { //Create a point
+        type: "point",
+        longitude: -118.80657463861,
+        latitude: 34.0005930608889
+        };
+        const simpleMarkerSymbol = {
+        type: "simple-marker",
+        color: [226, 119, 40],  // Orange
+        outline: {
+        color: [255, 255, 255], // White
+        width: 1
+    }
+ };
+        //--------------------------------------------------------------------------------------------
+        // create a graphic and set the geometry and symbol properties. the graphic class will autocast point and marker when constructed
+        
+        const pointGraphic = new Graphic({
+        geometry: point,
+        symbol: simpleMarkerSymbol
+        });
+        graphicsLayer.add(pointGraphic);
+            
+        //-------------------------------------------------------------------------------------------
+        // create a polyline
+           // Create a line geometry
+        const polyline = {
+        type: "polyline",
+        paths: [
+        [-118.821527826096, 34.0139576938577], //Longitude, latitude
+        [-118.814893761649, 34.0080602407843], //Longitude, latitude
+        [-118.808878330345, 34.0016642996246]  //Longitude, latitude
+    ]
+ };
+        const simpleLineSymbol = {
+        type: "simple-line",
+        color: [226, 119, 40], // Orange
+        width: 2
+ };
+        const polylineGraphic = new Graphic({
+        geometry: polyline,
+        symbol: simpleLineSymbol
+ });
+        graphicsLayer.add(polylineGraphic);
+            
+         
+        // Create a polygon geometry-------------------------------------------------------------
+    const polygon = {
+    type: "polygon",
+    rings: [
+        [-118.818984489994, 34.0137559967283], //Longitude, latitude
+        [-118.806796597377, 34.0215816298725], //Longitude, latitude
+        [-118.791432890735, 34.0163883241613], //Longitude, latitude
+        [-118.79596686535, 34.008564864635],   //Longitude, latitude
+        [-118.808558110679, 34.0035027131376]  //Longitude, latitude
+    ]
+ };
+
+ const simpleFillSymbol = {
+    type: "simple-fill",
+    color: [227, 139, 79, 0.8],  // Orange, opacity 80%
+    outline: {
+        color: [255, 255, 255],
+        width: 1
+    }
+ };
+            
+    const popupTemplate = {
+    title: "{Name}",
+    content: "{Description}"
+ }
+    const attributes = {
+    Name: "Graphic",
+    Description: "I am a polygon"
+ }
+
+    const polygonGraphic = new Graphic({
+    geometry: polygon,
+    symbol: simpleFillSymbol,
+    attributes: attributes,
+    popupTemplate: popupTemplate
+
+ });
+ graphicsLayer.add(polygonGraphic);   
+            
+            
+//-------------------------------------------------
+// add a shapefile
+  const parks = new FeatureLayer({
+  url: "https://services1.arcgis.com/lBVEbio5xaQ5JB7X/arcgis/rest/services/parks_and_open_space/FeatureServer/0",
+      renderer: openSpacesRenderer,
+        opacity: 0.2
+
+
+  });
+
+map.add(parks, 0);
+            
+  const trails = new FeatureLayer({
+  url: "https://services1.arcgis.com/lBVEbio5xaQ5JB7X/arcgis/rest/services/trails/FeatureServer/0",
+      renderer: trailsRenderer,
+      opacity: .75
+      
+      
+});
+
+map.add(trails);
+            
+            
+const bikeTrails = new FeatureLayer({
+        url:
+          "https://services1.arcgis.com/lBVEbio5xaQ5JB7X/arcgis/rest/services/trails/FeatureServer/0",
+        renderer: bikeTrailsRenderer,
+        definitionExpression: "USE_BIKE = 'YES'"
+      });
+
+            
+    // the 0 is the stack index and puts it at the top of the array        
+      map.add(bikeTrails, 0);            
+            
+            
+            
+            
+            
+            
+    const trailHeads = new FeatureLayer({
+  url: "https://services1.arcgis.com/lBVEbio5xaQ5JB7X/arcgis/rest/services/trailheads/FeatureServer/0",
+        // set the renderer and label properties
+    renderer: trailheadsRenderer,
+    labelingInfo: [trailheadsLabels]
+        
+        
+});
+
+map.add(trailHeads);
+     
+            
+            
+            //----------------------------------------------------
+            // vector tiles
+            
+    //const vtlLayer = new VectorTileLayer({
+    //url: "https://vectortileservices3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Santa_Monica_Mountains_Parcels_VTL/VectorTileServer/"
+    //});
+    
+    
+            
+    //map.add(vtlLayer)
+            
+//            const layerList = new LayerList({
+//          view: view,
+//          listItemCreatedFunction: (event) => {
+//            const item = event.item;
+//            if (item.layer.type != "group") {
+//              // don't show legend twice
+//              item.panel = {
+//                content: "legend",
+//                open: true
+//              };
+//            }
+//          }
+//        });
+//            view.ui.add(layerList, "bottom-left");
+            
+            let legend = new Legend({
+            view: view,
+            label: "Legend",
+            container: "legend"
+//             layerInfos: [{
+//
+//                        layer: trailHeads,
+//
+//                        title: "Trailheads"
+//
+//                    },{
+//                        layer: bikeTrails,
+//
+//                        title: "Bike Trails"
+//                    },{
+//                        
+//                        layer: parks,
+//
+//                        title: "Parks and Open Spaces"
+//                      
+//                    },{
+//                        layer: polygonGraphic,
+//
+//                        title: "Orange Park"
+//                    
+//                        
+//                        
+//                        
+//                    }]
+            
+            });
+            
+            view.ui.add(legend, {position: "top-right"
+                               });
+            
+            
+            
+        //------------------------------------
+            // scale bar
+       let scaleBar = new ScaleBar({
+        view: view
+        });
+            // Add widget to the bottom left corner of the view
+            view.ui.add(scaleBar, {
+            position: "bottom-left"
+                }); 
+        //--------------------------------------
+            // distance measurement widget
+        let measurementWidget = new DistanceMeasurement2D({
+        view: view
+        });
+            view.ui.add(measurementWidget, "top-right");
+            
+        //----------------------------------------
+        // compass widget
+        let compass = new Compass({
+        view: view
+        });
+
+            // adds the compass to the top left corner of the MapView
+            view.ui.add(compass, "top-left");
+        //-------------------------------------------
+        // search widget
+        const searchWidget = new Search({
+        view: view
+        });
+            // Adds the search widget below other elements in
+            // the top left corner of the view
+            view.ui.add(searchWidget, {
+            position: "top-left",
+            index: 2
+            });
+            
+        //---------------------------------------------
+            // query the parks layer
+        let query_url = "https://services1.arcgis.com/lBVEbio5xaQ5JB7X/arcgis/rest/services/parks_and_open_space/FeatureServer/0"
+            
+            
+            
+            
+            
+            
+            
+        
+        });
+    </script>
+
+  </head>
+  <body>
+      
+        <! define the main div for the map >  
+        <div id="viewDiv"></div>
+        
+  
+    
+      
+  </body>
+</html>
